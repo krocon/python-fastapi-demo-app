@@ -1,164 +1,126 @@
-# FastAPI Multi-Protocol Backend Demo
+# Python + FastAPI Demo App
 
-Ein modulares, produktionsnahes Python-Backend, das zeigt, wie moderne Architekturen mit **FastAPI**, **Pydantic v2**, **SQLAlchemy 2.0 (Async)** und **PostgreSQL** aufgebaut werden. 
+A small, self-contained REST API built with [FastAPI](https://fastapi.tiangolo.com) and Python.
+It is the Python counterpart of [kotlin-ktor-demo-app](https://github.com/krocon/kotlin-ktor-demo-app)
+and the reference example for a series of one-minute videos — every file
+focuses on **one** concept, so each video can point to exactly one place in the code.
 
-Das Besondere an dieser Demo ist die gleichzeitige Bereitstellung und Erweiterung von **drei unterschiedlichen Schnittstellen-Paradigmen**, die alle auf dieselbe relationale Datenbasis und dieselbe Business-Logik-Schicht (Services) zugreifen:
+## Quick start
 
-1. 🌐 **REST API** (Standard HTTP/JSON mit automatischer OpenAPI/Swagger-Dokumentation)
-2. 🔮 **GraphQL API** (Strawberry GraphQL mit GraphiQL-Explorer und typisierten Schemas)
-3. ⚡ **Protocol Buffers (Protobuf)** (Binäre High-Performance-Schnittstelle über HTTP für Microservices)
+Requirements: Python 3.12 or newer and [uv](https://docs.astral.sh/uv/) (tested setup: Python 3.13).
 
----
-
-## 🏗️ Architektur & Verzeichnisstruktur
-
-```
-fastapidemo/
-├── app/
-│   ├── core/
-│   │   ├── config.py          # Pydantic Settings (.env, DB-Verbindungsdaten)
-│   │   └── database.py        # SQLAlchemy 2.0 Async Engine & SQLite-Fallback
-│   ├── models/                # SQLAlchemy 2.0 Declarative Mapped Entities
-│   │   ├── base.py            # DeclarativeBase
-│   │   ├── user.py            # User-Entity (1:n zu Items, lazy="selectin")
-│   │   └── item.py            # Item-Entity (ForeignKey zu User)
-│   ├── schemas/               # Pydantic v2 Schemas (Validierung & Serialisierung)
-│   │   ├── user.py            # UserCreate, UserRead, UserUpdate
-│   │   └── item.py            # ItemCreate, ItemRead
-│   ├── services/              # Protokoll-unabhängige Geschäftslogik (CRUD)
-│   │   ├── user_service.py    # Abfragen & Mutationen für Users
-│   │   └── item_service.py    # Abfragen & Mutationen für Items
-│   ├── routers/               # HTTP-Endpunkte
-│   │   ├── rest_router.py     # REST-Routen (/api/v1/users, /api/v1/items)
-│   │   └── proto_router.py    # Protobuf-Routen (/api/v1/proto/users)
-│   ├── graphql/               # Strawberry GraphQL
-│   │   ├── types.py           # GraphQL Typen & Input-Definitionen
-│   │   └── schema.py          # Queries, Mutations & FastAPI Router (/graphql)
-│   └── proto/                 # Protocol Buffers
-│       ├── user.proto         # Schemadefinition (.proto)
-│       └── user_pb2.py        # Kompilierter Python-Code
-├── tests/
-│   └── test_api.py            # Pytest Test-Suite für alle 3 Protokolle
-├── docker-compose.yml         # Lokaler PostgreSQL 16 Container
-├── demo_client.py             # Interaktiver Test-Client für alle Schnittstellen
-├── test_main.http             # PyCharm HTTP Client Datei
-├── requirements.txt           # Python-Abhängigkeiten
-└── main.py                    # Einstiegspunkt & FastAPI Lifespan
-```
-
----
-
-## 🚀 Schnellstart
-
-### 1. Abhängigkeiten installieren
-Die Pakete sind bereits im virtuellen Environment installiert. Falls neu aufgesetzt:
 ```bash
-source .venv/bin/activate
-pip install -r requirements.txt
+uv sync                          # create .venv and install dependencies
+uv run python -m app             # start the server on http://localhost:8080
+uv run fastapi dev app/main.py --port 8080   # same, with auto-reload
+uv run pytest                    # run all tests
 ```
 
-### 2. Datenbank
-Die Demo unterstützt **PostgreSQL** (über `asyncpg`), besitzt aber einen **automatischen Fallback auf SQLite**, falls kein PostgreSQL-Server läuft. Du kannst die Demo sofort ohne Docker starten!
+Without uv:
 
-Möchtest du echten PostgreSQL verwenden:
 ```bash
-docker compose up -d
+python -m venv .venv && source .venv/bin/activate
+pip install "fastapi[standard]>=0.135" pytest httpx2
+python -m app
 ```
 
-### 3. Server starten
+Try it:
+
 ```bash
-uvicorn main:app --reload
+curl http://localhost:8080/tasks
+curl -X POST http://localhost:8080/tasks -H "Content-Type: application/json" -d '{"title":"Try FastAPI"}'
 ```
-Der Server läuft unter: **`http://127.0.0.1:8000`**
 
----
+Or open [`requests.http`](requests.http) in PyCharm / IntelliJ IDEA and click the ▶ icons.
+FastAPI also generates interactive API docs at <http://localhost:8080/docs>.
 
-## 🔌 Die 3 Schnittstellen im Überblick
+## Endpoints
 
-### 1. REST API
-- **Dokumentation & Swagger UI**: Öffne [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-- **Typisierung**: Pydantic v2 validiert Ein- und Ausgaben strikt.
-- **Routen**:
-  - `POST /api/v1/users`: Neuen Benutzer anlegen (Status 201)
-  - `GET /api/v1/users`: Liste aller Benutzer
-  - `GET /api/v1/users/{id}`: Detailansicht inklusive relationaler Items
-  - `POST /api/v1/items`: Neues Item für einen Benutzer anlegen
-  - `GET /api/v1/items`: Liste aller Items
+| Method | Path            | Description                              |
+|--------|-----------------|------------------------------------------|
+| GET    | `/`             | Hello world                              |
+| GET    | `/health`       | Health check                             |
+| GET    | `/tasks`        | List tasks (optional `?done=true/false`) |
+| GET    | `/tasks/{id}`   | Get one task                             |
+| POST   | `/tasks`        | Create a task                            |
+| PATCH  | `/tasks/{id}`   | Update title and/or done                 |
+| DELETE | `/tasks/{id}`   | Delete a task                            |
+| WS     | `/ws/tasks`     | Live task events; send text to create    |
+| GET    | `/tasks/events` | Live task events as Server-Sent Events   |
+| GET    | `/live/`        | Browser demo page for the live features  |
+| GET    | `/docs`         | Swagger UI (generated by FastAPI)        |
 
-### 2. GraphQL API (Strawberry)
-- **Interaktiver GraphiQL Explorer**: Öffne [http://127.0.0.1:8000/graphql](http://127.0.0.1:8000/graphql)
-- **Vorteil**: Clients fordern exakt die Felder an, die sie benötigen (kein Over-/Underfetching).
-- **Beispiel-Mutation**:
-  ```graphql
-  mutation {
-    createUser(input: {
-      username: "anna_dev",
-      email: "anna@example.com",
-      role: "frontend_dev"
-    }) {
-      id
-      username
-      createdAt
-    }
-  }
-  ```
-- **Beispiel-Query mit verschachtelten Relationen**:
-  ```graphql
-  query {
-    users {
-      id
-      username
-      items {
-        title
-        price
-      }
-    }
-  }
-  ```
+## Live updates (WebSockets & SSE)
 
-### 3. Protocol Buffers (Protobuf über HTTP)
-- **Ziel**: Höchste Geschwindigkeit und minimale Payload-Größe für Microservices oder mobile Clients.
-- **Header**: `Content-Type: application/x-protobuf`
-- **Endpunkte**:
-  - `POST /api/v1/proto/users`: Sendet `CreateUserRequest` als Binär-Stream, empfängt `UserMessage`.
-  - `GET /api/v1/proto/users`: Empfängt `UserListResponse` als kompakten Binär-Stream.
-- **Kompilierung von `.proto`**:
-  Wird `.proto` angepasst, kompiliert `grpcio-tools` direkt im Virtualenv ohne externe Tools:
-  ```bash
-  python -m grpc_tools.protoc -Iapp/proto --python_out=app/proto app/proto/user.proto
-  ```
+Open <http://localhost:8080/live/> in two browser windows. Add, check or delete a task in one
+window – the other one updates instantly.
 
----
+Every change made through the REST API or the WebSocket is published to a `TaskEventBus`
+(one `asyncio.Queue` per subscriber) and pushed to all connected clients as JSON:
 
-## 🧪 Testen & Vorführen
+```json
+{"type":"created","task":{"id":4,"title":"Try FastAPI","done":false}}
+```
 
-### Interaktiver Demo-Client (`demo_client.py`)
-Führt alle drei Protokolle nacheinander aus und demonstriert, dass alle drei denselben Zustand in der Datenbank manipulieren:
+From the terminal:
+
 ```bash
-python demo_client.py
+curl -N http://localhost:8080/tasks/events   # SSE stream, keep open
+websocat ws://localhost:8080/ws/tasks          # WebSocket, type a title + Enter
 ```
 
-### Automatisierte Pytest-Suite
+## Project map (one topic per file)
+
+| Topic                              | File                                                                               |
+|------------------------------------|------------------------------------------------------------------------------------|
+| Starting the server                | [`app/__main__.py`](app/__main__.py)                                               |
+| App factory / wiring               | [`app/main.py`](app/main.py)                                                       |
+| Routing basics                     | [`plugins/routing.py`](app/plugins/routing.py)                                     |
+| REST routes / CRUD                 | [`tasks/task_routes.py`](app/tasks/task_routes.py)                                 |
+| JSON responses                     | [`plugins/serialization.py`](app/plugins/serialization.py)                         |
+| Pydantic models / DTOs             | [`tasks/task.py`](app/tasks/task.py)                                               |
+| Error handling (exception handlers)| [`plugins/status_pages.py`](app/plugins/status_pages.py)                           |
+| Request validation                 | [`tasks/validation.py`](app/tasks/validation.py)                                   |
+| Dependency injection (`Depends`)   | [`tasks/dependencies.py`](app/tasks/dependencies.py)                               |
+| Live endpoints (WS + SSE)          | [`live/live_routes.py`](app/live/live_routes.py)                                   |
+| Pub/sub with asyncio queues        | [`tasks/task_event_bus.py`](app/tasks/task_event_bus.py)                           |
+| Tagged unions as JSON events       | [`tasks/task_event.py`](app/tasks/task_event.py)                                   |
+| Browser WebSocket client           | [`static/index.html`](app/static/index.html)                                       |
+| Testing WebSockets                 | [`test_live_routes.py`](tests/test_live_routes.py)                                 |
+| Logging (middleware)               | [`plugins/monitoring.py`](app/plugins/monitoring.py)                               |
+| Repository pattern (`Protocol`)    | [`tasks/task_repository.py`](app/tasks/task_repository.py)                         |
+| In-memory storage                  | [`tasks/in_memory_task_repository.py`](app/tasks/in_memory_task_repository.py)     |
+| Testing routes (`TestClient`)      | [`test_task_routes.py`](tests/test_task_routes.py)                                 |
+| Unit testing                       | [`test_in_memory_task_repository.py`](tests/test_in_memory_task_repository.py)     |
+| Test fixtures                      | [`tests/conftest.py`](tests/conftest.py)                                           |
+| Dependencies                       | [`pyproject.toml`](pyproject.toml)                                                 |
+| Docker                             | [`Dockerfile`](Dockerfile)                                                         |
+
+## Ktor ↔ FastAPI
+
+| Ktor                                   | FastAPI                                                  |
+|----------------------------------------|----------------------------------------------------------|
+| `embeddedServer(Netty)`                | `uvicorn.run(...)`                                       |
+| `Application.module(...)`              | `create_app(...)` factory                                |
+| `@Serializable data class`             | Pydantic `BaseModel`                                     |
+| `install(StatusPages)`                 | `@app.exception_handler(...)`                            |
+| `install(RequestValidation)`           | Pydantic validators (`Annotated[str, AfterValidator]`)   |
+| `install(CallLogging)`                 | `@app.middleware("http")`                                |
+| `install(WebSockets)` / `install(SSE)` | built in: `@router.websocket`, `EventSourceResponse`     |
+| `sealed interface TaskEvent`           | discriminated union (`Field(discriminator="type")`)      |
+| `MutableSharedFlow`                    | one `asyncio.Queue` per subscriber                       |
+| `testApplication { }`                  | `fastapi.testclient.TestClient`                          |
+| `libs.versions.toml`                   | `pyproject.toml` + `uv.lock`                             |
+
+## Docker
+
 ```bash
-pytest -v
+docker build -t fastapi-demo .
+docker run -p 8080:8080 fastapi-demo
 ```
 
-### PyCharm HTTP Client
-Öffne `test_main.http` in PyCharm und klicke auf die grünen "Play"-Icons neben den Requests, um REST- und GraphQL-Anfragen live auszuführen.
+## Configuration
 
----
-
-## 🛠️ Erweiterungsanleitung
-
-### Wie füge ich ein neues Feld hinzu? (z.B. `phone` für User)
-1. **Model** (`app/models/user.py`):
-   ```python
-   phone: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
-   ```
-2. **Pydantic Schemas** (`app/schemas/user.py`):
-   Füge `phone: Optional[str] = None` in `UserBase` ein.
-3. **GraphQL Types** (`app/graphql/types.py`):
-   Füge `phone: Optional[str] = None` in `UserType` und `CreateUserInput` ein.
-4. **Protobuf** (`app/proto/user.proto`):
-   Füge `string phone = 8;` hinzu und führe den Kompilierungsbefehl aus.
-5. Fertig! Datenbank-Tabellen werden beim nächsten Start automatisch angepasst.
+| Variable | Default | Description      |
+|----------|---------|------------------|
+| `PORT`   | `8080`  | HTTP server port |
