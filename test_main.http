@@ -1,0 +1,71 @@
+### 1. Root & Status Check
+GET http://127.0.0.1:8000/
+Accept: application/json
+
+### 2. REST API: Neuen Benutzer anlegen
+POST http://127.0.0.1:8000/api/v1/users
+Content-Type: application/json
+
+{
+  "username": "max_mustermann",
+  "email": "max@example.com",
+  "role": "lead_developer"
+}
+
+### 3. REST API: Alle Benutzer abrufen
+GET http://127.0.0.1:8000/api/v1/users
+Accept: application/json
+
+### 4. REST API: Item für Benutzer 1 erstellen
+POST http://127.0.0.1:8000/api/v1/items
+Content-Type: application/json
+
+{
+  "title": "Dell XPS 15",
+  "description": "32GB RAM, OLED Display",
+  "price": 2199.00,
+  "owner_id": 1
+}
+
+### 5. REST API: Benutzer nach ID abrufen (inkl. Items)
+GET http://127.0.0.1:8000/api/v1/users/1
+Accept: application/json
+
+### 6. GraphQL: Benutzer über Mutation erstellen
+POST http://127.0.0.1:8000/graphql
+Content-Type: application/json
+
+{
+  "query": "mutation CreateUser($input: CreateUserInput!) { createUser(input: $input) { id username email role isActive } }",
+  "variables": {
+    "input": {
+      "username": "sarah_connor",
+      "email": "sarah@example.com",
+      "role": "admin"
+    }
+  }
+}
+
+### 7. GraphQL: Benutzer mit verschachtelten Items abfragen
+POST http://127.0.0.1:8000/graphql
+Content-Type: application/json
+
+{
+  "query": "query { users { id username email role items { id title price } } }"
+}
+
+### 8. GraphQL: Einzelnen Benutzer abfragen
+POST http://127.0.0.1:8000/graphql
+Content-Type: application/json
+
+{
+  "query": "query { user(id: 1) { id username email items { title price } } }"
+}
+
+### Einfache GraphQL Abfrage: Alle Benutzer (ID & Username)
+POST http://127.0.0.1:8000/graphql
+Content-Type: application/json
+
+{
+  "query": "{ users { id username email } }"
+}
